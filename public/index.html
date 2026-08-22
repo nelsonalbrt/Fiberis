@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Fiberis — pusat operasi jalur fiber optic">
+  <title>Fiberis · Network Operations</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <section id="login" class="login-shell">
+    <div class="login-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+    <form id="login-form" class="login-card">
+      <p class="eyebrow">Network operations / internal</p>
+      <h1>Fiberis</h1>
+      <p class="muted">Satu kontrol untuk jalur, core, dan gangguan FO.</p>
+      <label>Username<input name="username" autocomplete="username" value="operator" required></label>
+      <label>Password<input name="password" type="password" autocomplete="current-password" required></label>
+      <button id="login-button" type="submit">Masuk dashboard</button>
+      <p class="hint">Gunakan kredensial testing dari README.md.</p>
+      <p id="login-error" class="error" role="alert"></p>
+    </form>
+  </section>
+
+  <div id="app" class="app-shell" hidden>
+    <aside>
+      <a class="brand" href="#dashboard"><span class="brand-line"></span>Fiberis</a>
+      <nav aria-label="Navigasi utama">
+        <a class="active" href="#dashboard" data-view="dashboard">Overview</a>
+        <a href="#network" data-view="network">Network map</a>
+        <a href="#incidents" data-view="incidents">Incidents</a>
+        <a href="#cores" data-view="cores">Core inventory</a>
+        <a href="#history" data-view="history">History</a>
+        <a href="#import-preview" data-view="import-preview">Import preview</a>
+        <a href="#changeover" data-view="changeover" data-write-action>Change over</a>
+      </nav>
+      <div class="side-foot"><span id="role">—</span><button class="text-button" id="logout">Keluar</button></div>
+    </aside>
+
+    <main>
+      <header>
+        <div><p class="eyebrow">Fiber optic command desk</p><h2 id="page-title">Network overview</h2></div>
+        <form id="search-form" class="search"><label class="sr-only" for="query">Cari jaringan</label><input id="query" placeholder="Cari device, route, cable, core…"><button>Cari</button></form>
+      </header>
+
+      <section id="dashboard" class="view">
+        <div id="stats" class="stats"></div>
+        <div class="grid-main">
+          <article class="panel topology"><div class="panel-head"><div><p class="eyebrow">Active topology</p><h3>Alpha → Gamma</h3></div><span class="status good">Healthy path</span></div><div id="topology"></div></article>
+          <article class="panel"><div class="panel-head"><div><p class="eyebrow">Live queue</p><h3>Incident aktif</h3></div><button class="small" data-open-incident data-write-action>+ Catat</button></div><div id="incident-list"></div></article>
+        </div>
+      </section>
+
+      <section id="network" class="view" hidden><article class="panel"><div class="panel-head"><div><p class="eyebrow">Search result</p><h3>Asset jaringan</h3></div></div><div id="search-results" class="result-grid"><p class="empty">Gunakan kolom pencarian untuk menemukan asset.</p></div></article></section>
+
+      <section id="incidents" class="view" hidden><article class="panel"><div class="panel-head"><div><p class="eyebrow">Operational record</p><h3>Incident register</h3></div><button class="small" data-open-incident data-write-action>+ Incident baru</button></div><div id="all-incidents"></div></article></section>
+
+      <section id="cores" class="view" hidden><article class="panel"><div class="panel-head"><div><p class="eyebrow">Capacity register</p><h3>Core inventory</h3></div><button class="small" id="export-cores">Export CSV</button></div><div id="core-list" class="result-grid"></div></article></section>
+
+      <section id="history" class="view" hidden><article class="panel"><div class="panel-head"><div><p class="eyebrow">Immutable record</p><h3>Change history</h3></div></div><div id="history-list"></div></article></section>
+
+      <section id="import-preview" class="view" hidden><article class="panel"><div class="panel-head"><div><p class="eyebrow">Read-only staging</p><h3>Excel import preview</h3></div><span class="status">Publish disabled</span></div><div id="preview-summary" class="stats"></div><div id="preview-workbooks"></div><p class="hint">Data Excel belum masuk dashboard. Review dan persetujuan wajib sebelum fitur publish dibuat.</p></article></section>
+
+      <section id="changeover" class="view" data-write-action hidden><div class="grid-main"><form id="co-form" class="panel"><p class="eyebrow">Controlled operation</p><h3>Change over core</h3><label>Assignment ID<input name="assignmentId" type="number" value="1" min="1" required></label><label>Core proteksi<select name="targetCoreId" id="core-options"></select></label><label>Alasan<textarea name="reason" required>Simulasi penanganan FO cut</textarea></label><button type="button" id="preview-co">Validasi perubahan</button></form><article class="panel"><p class="eyebrow">Safety gate</p><h3>Preview</h3><div id="co-preview" class="empty">Pilih core lalu jalankan validasi.</div></article></div></section>
+    </main>
+  </div>
+
+  <dialog id="incident-dialog"><form id="incident-form" method="dialog"><div class="panel-head"><div><p class="eyebrow">New operational record</p><h3>Catat incident</h3></div><button value="cancel" class="icon" aria-label="Tutup">×</button></div><label>Tipe<select name="type"><option value="FO_CUT">FO cut</option><option value="CONGESTION">Congestion control</option><option value="DEVICE_TROUBLE">Device trouble</option></select></label><label>Ringkasan<textarea name="summary" required placeholder="Jelaskan kondisi singkat"></textarea></label><div class="two"><label>Resource<select name="resourceType"><option value="cable">Cable</option><option value="device">Device</option><option value="route">Route</option></select></label><label>ID<input name="resourceId" type="number" value="1" min="1" required></label></div><button value="default">Simpan incident</button><p id="incident-error" class="error" role="alert"></p></form></dialog>
+  <div id="toast" role="status"></div>
+  <script type="module" src="/app.js?v=20260822-2"></script>
+</body>
+</html>

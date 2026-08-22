@@ -1,0 +1,18 @@
+# Confidential operational inputs and derived profiles
+Sumber data excel/
+audit/
+data/
+Plan.MD
+
+# Generated local knowledge graph
+graphify-out/
+
+# Runtime and local configuration
+node_modules/
+.env
+*.log
+__pycache__/
+*.pyc
+
+# Office lock files
+~$*.xlsx

@@ -1,5 +1,6 @@
 import crypto from 'node:crypto';
 import fs from 'node:fs';
+import nodePath from 'node:path';
 
 const seed = {
   users: [
@@ -95,11 +96,27 @@ export function createApp(file = ':memory:', previewFile = null) {
         const user = auth(request);
         if (!user) return json(401, { error: 'AUTH_REQUIRED' });
         if (method === 'GET' && path === '/api/me') return json(200, { user });
+        const mappingFile = previewFile ? nodePath.join(nodePath.dirname(previewFile), 'domain-mapping.json') : null;
+        const reviewFile = previewFile ? nodePath.join(nodePath.dirname(previewFile), 'domain-mapping-reviews.json') : null;
+        const readMapping = () => mappingFile && fs.existsSync(mappingFile) ? JSON.parse(fs.readFileSync(mappingFile, 'utf8')) : null;
+        const readReviews = () => reviewFile && fs.existsSync(reviewFile) ? JSON.parse(fs.readFileSync(reviewFile, 'utf8')) : [];
+        if (method === 'POST' && path === '/api/domain-mapping/reviews') {
+          if (user.role !== 'ADMIN') return json(403, { error: 'FORBIDDEN' });
+          const body = await parseBody(request); const mapping = readMapping();
+          if (!mapping) return json(404, { error: 'MAPPING_NOT_READY' });
+          const candidate = mapping.candidates?.find(x => x.workbook === body.workbook && x.sheet === body.sheet && x.sha256 === body.sha256);
+          if (!candidate) return json(409, { error: 'CANDIDATE_OR_HASH_MISMATCH' });
+          if (!['AUTHORITATIVE', 'REJECTED', 'REVIEW_REQUIRED'].includes(body.decision)) return json(400, { error: 'INVALID_DECISION' });
+          const review = { id: id(), workbook: candidate.workbook, sheet: candidate.sheet, sha256: candidate.sha256, domain: candidate.domain, decision: body.decision, note: String(body.note || '').trim(), actorId: user.id, createdAt: new Date().toISOString() };
+          // ponytail: synchronous JSON is single-process only; replace with a database transaction before production.
+          const reviews = readReviews().filter(x => !(x.workbook === review.workbook && x.sheet === review.sheet && x.sha256 === review.sha256)); reviews.push(review);
+          fs.writeFileSync(reviewFile, JSON.stringify(reviews, null, 2));
+          return json(201, review);
+        }
         if (method === 'GET' && path === '/api/import-preview') {
           if (!previewFile || !fs.existsSync(previewFile)) return json(404, { error: 'PREVIEW_NOT_READY' });
-          const report = JSON.parse(fs.readFileSync(previewFile, 'utf8'));
-          const mappingFile = previewFile.replace('import-preview.json', 'domain-mapping.json');
-          report.domain_mapping = fs.existsSync(mappingFile) ? JSON.parse(fs.readFileSync(mappingFile, 'utf8')) : null;
+          const report = JSON.parse(fs.readFileSync(previewFile, 'utf8')); report.domain_mapping = readMapping();
+          if (report.domain_mapping) { report.domain_mapping.reviews = readReviews(); report.domain_mapping.approval_enabled = false; }
           report.publish_enabled = false;
           return json(200, report);
         }

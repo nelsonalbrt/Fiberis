@@ -15,6 +15,7 @@ Sudah tersedia:
 - Change Over preview, validasi, commit, dan history;
 - import workbook preview-only;
 - candidate domain mapping tanpa publish;
+- review candidate mapping khusus Admin, terikat workbook/sheet/SHA-256;
 - password lokal melalui `.env` dan hash `scrypt`;
 - test Node dan Python;
 - repository Git bersih tanpa workbook, audit mentah, runtime data, graph output, atau secret.

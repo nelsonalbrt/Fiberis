@@ -59,7 +59,7 @@
 
       <section id="history" class="view" hidden><article class="panel"><div class="panel-head"><div><p class="eyebrow">Immutable record</p><h3>Change history</h3></div></div><div id="history-list"></div></article></section>
 
-      <section id="import-preview" class="view" hidden><article class="panel"><div class="panel-head"><div><p class="eyebrow">Read-only staging</p><h3>Excel import preview</h3></div><span class="status">Publish disabled</span></div><div id="preview-summary" class="stats"></div><div id="preview-workbooks"></div><p class="hint">Data Excel belum masuk dashboard. Review dan persetujuan wajib sebelum fitur publish dibuat.</p></article></section>
+      <section id="import-preview" class="view" hidden><article class="panel"><div class="panel-head"><div><p class="eyebrow">Read-only staging</p><h3>Excel import preview</h3></div><span class="status">Publish disabled</span></div><div id="preview-summary" class="stats"></div><div id="preview-workbooks"></div><div id="mapping-candidates"></div><p class="hint">Data Excel belum masuk dashboard. Review mapping bukan approval dan tidak mengaktifkan publish.</p></article></section>
 
       <section id="changeover" class="view" data-write-action hidden><div class="grid-main"><form id="co-form" class="panel"><p class="eyebrow">Controlled operation</p><h3>Change over core</h3><label>Assignment ID<input name="assignmentId" type="number" value="1" min="1" required></label><label>Core proteksi<select name="targetCoreId" id="core-options"></select></label><label>Alasan<textarea name="reason" required>Simulasi penanganan FO cut</textarea></label><button type="button" id="preview-co">Validasi perubahan</button></form><article class="panel"><p class="eyebrow">Safety gate</p><h3>Preview</h3><div id="co-preview" class="empty">Pilih core lalu jalankan validasi.</div></article></div></section>
     </main>
@@ -67,6 +67,6 @@
 
   <dialog id="incident-dialog"><form id="incident-form" method="dialog"><div class="panel-head"><div><p class="eyebrow">New operational record</p><h3>Catat incident</h3></div><button value="cancel" class="icon" aria-label="Tutup">×</button></div><label>Tipe<select name="type"><option value="FO_CUT">FO cut</option><option value="CONGESTION">Congestion control</option><option value="DEVICE_TROUBLE">Device trouble</option></select></label><label>Ringkasan<textarea name="summary" required placeholder="Jelaskan kondisi singkat"></textarea></label><div class="two"><label>Resource<select name="resourceType"><option value="cable">Cable</option><option value="device">Device</option><option value="route">Route</option></select></label><label>ID<input name="resourceId" type="number" value="1" min="1" required></label></div><button value="default">Simpan incident</button><p id="incident-error" class="error" role="alert"></p></form></dialog>
   <div id="toast" role="status"></div>
-  <script type="module" src="/app.js?v=20260822-2"></script>
+  <script type="module" src="/app.js?v=20260822-3"></script>
 </body>
 </html>

@@ -108,6 +108,66 @@ test('import preview report is readable but cannot be published', async () => {
   } finally { fs.rmSync(file, { force: true }); }
 });
 
+test('admin can review a mapping candidate without enabling publish', async () => {
+  const dir = fs.mkdtempSync(path.join(path.dirname(fileURLToPath(import.meta.url)), 'tmp-mapping-'));
+  const previewFile = path.join(dir, 'import-preview.json');
+  const mappingFile = path.join(dir, 'domain-mapping.json');
+  fs.writeFileSync(previewFile, JSON.stringify({ mode: 'PREVIEW_ONLY', publish_enabled: false, summary: {}, workbooks: [] }));
+  fs.writeFileSync(mappingFile, JSON.stringify({
+    mode: 'DOMAIN_MAPPING_PREVIEW', publish_enabled: false, approval_enabled: false,
+    source_hashes: [{ file: 'synthetic.xlsx', sha256: 'abc123' }],
+    summary: { candidates: 1, unresolved: 1 },
+    candidates: [{ workbook: 'synthetic.xlsx', sha256: 'abc123', sheet: 'Devices', domain: 'DEVICE' }],
+  }));
+  try {
+    const app = createApp(':memory:', previewFile);
+    const admin = await login(app, 'admin', 'test-admin-password');
+    const saved = await api(app, '/api/domain-mapping/reviews', {
+      method: 'POST', headers: admin,
+      body: { workbook: 'synthetic.xlsx', sheet: 'Devices', sha256: 'abc123', decision: 'AUTHORITATIVE', note: 'Synthetic review' },
+    });
+    assert.equal(saved.status, 201);
+    assert.equal(saved.body.decision, 'AUTHORITATIVE');
+    const report = await api(app, '/api/import-preview', { headers: admin });
+    assert.equal(report.body.publish_enabled, false);
+    assert.equal(report.body.domain_mapping.approval_enabled, false);
+    assert.equal(report.body.domain_mapping.reviews.length, 1);
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
+test('mapping review never overwrites a custom preview filename', async () => {
+  const dir = fs.mkdtempSync(path.join(path.dirname(fileURLToPath(import.meta.url)), 'tmp-mapping-'));
+  const previewFile = path.join(dir, 'custom-preview.json');
+  const original = { mode: 'PREVIEW_ONLY', publish_enabled: false, summary: {}, workbooks: [], candidates: [{ workbook: 'synthetic.xlsx', sheet: 'Devices', sha256: 'current', domain: 'DEVICE' }] };
+  fs.writeFileSync(previewFile, JSON.stringify(original));
+  fs.writeFileSync(path.join(dir, 'domain-mapping.json'), JSON.stringify({ candidates: original.candidates }));
+  try {
+    const app = createApp(':memory:', previewFile);
+    const admin = await login(app, 'admin', 'test-admin-password');
+    const saved = await api(app, '/api/domain-mapping/reviews', { method: 'POST', headers: admin, body: { workbook: 'synthetic.xlsx', sheet: 'Devices', sha256: 'current', decision: 'AUTHORITATIVE' } });
+    assert.equal(saved.status, 201);
+    assert.deepEqual(JSON.parse(fs.readFileSync(previewFile, 'utf8')), original);
+    assert.equal(JSON.parse(fs.readFileSync(path.join(dir, 'domain-mapping-reviews.json'), 'utf8')).length, 1);
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
+test('mapping review rejects operator and stale source hash', async () => {
+  const dir = fs.mkdtempSync(path.join(path.dirname(fileURLToPath(import.meta.url)), 'tmp-mapping-'));
+  const previewFile = path.join(dir, 'import-preview.json');
+  fs.writeFileSync(previewFile, JSON.stringify({ mode: 'PREVIEW_ONLY', publish_enabled: false, summary: {}, workbooks: [] }));
+  fs.writeFileSync(path.join(dir, 'domain-mapping.json'), JSON.stringify({ candidates: [{ workbook: 'synthetic.xlsx', sheet: 'Devices', sha256: 'current', domain: 'DEVICE' }] }));
+  try {
+    const app = createApp(':memory:', previewFile);
+    const operator = await login(app);
+    const denied = await api(app, '/api/domain-mapping/reviews', { method: 'POST', headers: operator, body: { workbook: 'synthetic.xlsx', sheet: 'Devices', sha256: 'current', decision: 'AUTHORITATIVE' } });
+    assert.equal(denied.status, 403);
+    const admin = await login(app, 'admin', 'test-admin-password');
+    const stale = await api(app, '/api/domain-mapping/reviews', { method: 'POST', headers: admin, body: { workbook: 'synthetic.xlsx', sheet: 'Devices', sha256: 'stale', decision: 'AUTHORITATIVE' } });
+    assert.equal(stale.status, 409);
+    assert.equal(stale.body.error, 'CANDIDATE_OR_HASH_MISMATCH');
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
 test('stored passwords are hashed and plaintext login still works', async () => {
   const file = path.join(path.dirname(fileURLToPath(import.meta.url)), 'tmp-auth-db.json');
   try {
@@ -125,6 +185,15 @@ test('browser assets support login transition', () => {
   const css = fs.readFileSync(path.join(here, '../public/styles.css'), 'utf8');
   assert.doesNotThrow(() => new Function(source));
   assert.match(css, /\[hidden\]\s*\{\s*display\s*:\s*none\s*!important/);
+});
+
+test('browser exposes mapping review controls only for admin', () => {
+  const here = path.dirname(fileURLToPath(import.meta.url));
+  const html = fs.readFileSync(path.join(here, '../public/index.html'), 'utf8');
+  const source = fs.readFileSync(path.join(here, '../public/app.js'), 'utf8');
+  assert.match(html, /id="mapping-candidates"/);
+  assert.match(source, /user\.role==='ADMIN'/);
+  assert.match(source, /domain-mapping\/reviews/);
 });
 
 test('browser hides write actions from viewer role', () => {

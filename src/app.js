@@ -110,7 +110,9 @@ export function createApp(file = ':memory:', previewFile = null) {
           const review = { id: id(), workbook: candidate.workbook, sheet: candidate.sheet, sha256: candidate.sha256, domain: candidate.domain, decision: body.decision, note: String(body.note || '').trim(), actorId: user.id, createdAt: new Date().toISOString() };
           // ponytail: synchronous JSON is single-process only; replace with a database transaction before production.
           const reviews = readReviews().filter(x => !(x.workbook === review.workbook && x.sheet === review.sheet && x.sha256 === review.sha256)); reviews.push(review);
-          fs.writeFileSync(reviewFile, JSON.stringify(reviews, null, 2));
+          const tempFile = `${reviewFile}.${process.pid}.${id()}.tmp`;
+          try { fs.writeFileSync(tempFile, JSON.stringify(reviews, null, 2)); fs.renameSync(tempFile, reviewFile); }
+          finally { if (fs.existsSync(tempFile)) fs.unlinkSync(tempFile); }
           return json(201, review);
         }
         if (method === 'GET' && path === '/api/import-preview') {

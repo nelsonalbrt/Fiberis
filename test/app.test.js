@@ -151,6 +151,26 @@ test('mapping review never overwrites a custom preview filename', async () => {
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 });
 
+test('mapping review rejects non-admin roles and writes atomically', async () => {
+  const dir = fs.mkdtempSync(path.join(path.dirname(fileURLToPath(import.meta.url)), 'tmp-mapping-'));
+  const previewFile = path.join(dir, 'import-preview.json');
+  const candidate = { workbook: 'synthetic.xlsx', sheet: 'Devices', sha256: 'current', domain: 'DEVICE' };
+  fs.writeFileSync(previewFile, JSON.stringify({ mode: 'PREVIEW_ONLY', publish_enabled: false, summary: {}, workbooks: [], candidates: [candidate] }));
+  fs.writeFileSync(path.join(dir, 'domain-mapping.json'), JSON.stringify({ candidates: [candidate] }));
+  try {
+    const app = createApp(':memory:', previewFile);
+    for (const [username, password] of [['operator', 'test-operator-password'], ['viewer', 'test-viewer-password']]) {
+      const headers = await login(app, username, password);
+      const denied = await api(app, '/api/domain-mapping/reviews', { method: 'POST', headers, body: { ...candidate, decision: 'AUTHORITATIVE' } });
+      assert.equal(denied.status, 403);
+    }
+    const admin = await login(app, 'admin', 'test-admin-password');
+    assert.equal((await api(app, '/api/domain-mapping/reviews', { method: 'POST', headers: admin, body: { ...candidate, decision: 'AUTHORITATIVE' } })).status, 201);
+    assert.deepEqual(fs.readdirSync(dir).filter(name => name.endsWith('.tmp')), []);
+    assert.equal(JSON.parse(fs.readFileSync(path.join(dir, 'domain-mapping-reviews.json'), 'utf8')).length, 1);
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
 test('mapping review rejects operator and stale source hash', async () => {
   const dir = fs.mkdtempSync(path.join(path.dirname(fileURLToPath(import.meta.url)), 'tmp-mapping-'));
   const previewFile = path.join(dir, 'import-preview.json');
@@ -194,6 +214,8 @@ test('browser exposes mapping review controls only for admin', () => {
   assert.match(html, /id="mapping-candidates"/);
   assert.match(source, /user\.role==='ADMIN'/);
   assert.match(source, /domain-mapping\/reviews/);
+  assert.match(source, /escapeHtml\(k\)/);
+  assert.match(source, /escapeHtml\(r\?\.decision/);
 });
 
 test('browser hides write actions from viewer role', () => {

@@ -252,7 +252,7 @@ test('browser assets support login transition and blue-white branding', () => {
   assert.match(css, /--blue:/);
   assert.doesNotMatch(css, /--green:/);
   const logo = fs.readFileSync(path.join(here, '../public/fiberis-mark.png'));
-  assert.equal(crypto.createHash('sha256').update(logo).digest('hex'), '7172ec754d90c7c9663866adaadfb6d36d9269bcb47a78aa3fadc4ec86c3cbf4');
+  assert.equal(crypto.createHash('sha256').update(logo).digest('hex'), '129a5b5c9838076eaa0270d639be344bfc488a4db6c54205e7251ac0dc32d529');
   assert.doesNotMatch(css, /\.login-logo[^}]*filter:|\.brand img[^}]*filter:/);
 });
 

@@ -118,7 +118,15 @@ export function createApp(file = ':memory:', previewFile = null) {
         if (method === 'GET' && path === '/api/import-preview') {
           if (!previewFile || !fs.existsSync(previewFile)) return json(404, { error: 'PREVIEW_NOT_READY' });
           const report = JSON.parse(fs.readFileSync(previewFile, 'utf8')); report.domain_mapping = readMapping();
-          if (report.domain_mapping) { report.domain_mapping.reviews = readReviews(); report.domain_mapping.approval_enabled = false; }
+          if (report.domain_mapping) {
+            const reviews = readReviews();
+            const candidateKeys = new Set((report.domain_mapping.candidates || []).map(x => `${x.workbook}\n${x.sheet}\n${x.sha256}`));
+            const decided = new Set(reviews.filter(x => ['AUTHORITATIVE', 'REJECTED'].includes(x.decision)).map(x => `${x.workbook}\n${x.sheet}\n${x.sha256}`).filter(key => candidateKeys.has(key)));
+            const total = candidateKeys.size;
+            report.domain_mapping.reviews = reviews;
+            report.domain_mapping.review_progress = { total, reviewed: decided.size, unresolved: total - decided.size, ready_for_normalization: total > 0 && decided.size === total };
+            report.domain_mapping.approval_enabled = false;
+          }
           report.publish_enabled = false;
           return json(200, report);
         }

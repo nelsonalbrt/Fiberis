@@ -132,6 +132,45 @@ test('admin can review a mapping candidate without enabling publish', async () =
     assert.equal(report.body.publish_enabled, false);
     assert.equal(report.body.domain_mapping.approval_enabled, false);
     assert.equal(report.body.domain_mapping.reviews.length, 1);
+    assert.equal(report.body.domain_mapping.review_progress.reviewed, 1);
+    assert.equal(report.body.domain_mapping.review_progress.unresolved, 0);
+    assert.equal(report.body.domain_mapping.review_progress.ready_for_normalization, true);
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
+test('mapping review progress stays blocked while a candidate needs review', async () => {
+  const dir = fs.mkdtempSync(path.join(path.dirname(fileURLToPath(import.meta.url)), 'tmp-mapping-'));
+  const previewFile = path.join(dir, 'import-preview.json');
+  const candidates = [
+    { workbook: 'synthetic.xlsx', sheet: 'Devices', sha256: 'current', domain: 'DEVICE' },
+    { workbook: 'synthetic.xlsx', sheet: 'Cores', sha256: 'current', domain: 'CORE_USAGE' },
+  ];
+  fs.writeFileSync(previewFile, JSON.stringify({ mode: 'PREVIEW_ONLY', publish_enabled: false, summary: {}, workbooks: [] }));
+  fs.writeFileSync(path.join(dir, 'domain-mapping.json'), JSON.stringify({ candidates }));
+  try {
+    const app = createApp(':memory:', previewFile);
+    const admin = await login(app, 'admin', 'test-admin-password');
+    await api(app, '/api/domain-mapping/reviews', { method: 'POST', headers: admin, body: { ...candidates[0], decision: 'AUTHORITATIVE' } });
+    await api(app, '/api/domain-mapping/reviews', { method: 'POST', headers: admin, body: { ...candidates[1], decision: 'REVIEW_REQUIRED' } });
+    const report = await api(app, '/api/import-preview', { headers: admin });
+    assert.deepEqual(report.body.domain_mapping.review_progress, { total: 2, reviewed: 1, unresolved: 1, ready_for_normalization: false });
+    assert.equal(report.body.publish_enabled, false);
+    assert.equal(report.body.domain_mapping.approval_enabled, false);
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
+test('mapping review progress ignores stale review entries', async () => {
+  const dir = fs.mkdtempSync(path.join(path.dirname(fileURLToPath(import.meta.url)), 'tmp-mapping-'));
+  const previewFile = path.join(dir, 'import-preview.json');
+  const candidate = { workbook: 'synthetic.xlsx', sheet: 'Devices', sha256: 'current', domain: 'DEVICE' };
+  fs.writeFileSync(previewFile, JSON.stringify({ mode: 'PREVIEW_ONLY', publish_enabled: false, summary: {}, workbooks: [] }));
+  fs.writeFileSync(path.join(dir, 'domain-mapping.json'), JSON.stringify({ candidates: [candidate] }));
+  fs.writeFileSync(path.join(dir, 'domain-mapping-reviews.json'), JSON.stringify([{ ...candidate, sha256: 'old', decision: 'AUTHORITATIVE' }]));
+  try {
+    const app = createApp(':memory:', previewFile);
+    const admin = await login(app, 'admin', 'test-admin-password');
+    const report = await api(app, '/api/import-preview', { headers: admin });
+    assert.deepEqual(report.body.domain_mapping.review_progress, { total: 1, reviewed: 0, unresolved: 1, ready_for_normalization: false });
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 });
 
@@ -211,7 +250,9 @@ test('browser exposes mapping review controls only for admin', () => {
   const here = path.dirname(fileURLToPath(import.meta.url));
   const html = fs.readFileSync(path.join(here, '../public/index.html'), 'utf8');
   const source = fs.readFileSync(path.join(here, '../public/app.js'), 'utf8');
+  assert.match(html, /id="mapping-progress"/);
   assert.match(html, /id="mapping-candidates"/);
+  assert.match(source, /ready_for_normalization/);
   assert.match(source, /user\.role==='ADMIN'/);
   assert.match(source, /domain-mapping\/reviews/);
   assert.match(source, /escapeHtml\(k\)/);

@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import crypto from 'node:crypto';
 import { createApp } from '../src/app.js';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -250,7 +251,9 @@ test('browser assets support login transition and blue-white branding', () => {
   assert.equal((html.match(/src="\/fiberis-mark\.png"/g) || []).length, 2);
   assert.match(css, /--blue:/);
   assert.doesNotMatch(css, /--green:/);
-  assert.ok(fs.statSync(path.join(here, '../public/fiberis-mark.png')).size > 0);
+  const logo = fs.readFileSync(path.join(here, '../public/fiberis-mark.png'));
+  assert.equal(crypto.createHash('sha256').update(logo).digest('hex'), '7172ec754d90c7c9663866adaadfb6d36d9269bcb47a78aa3fadc4ec86c3cbf4');
+  assert.doesNotMatch(css, /\.login-logo[^}]*filter:|\.brand img[^}]*filter:/);
 });
 
 test('browser exposes mapping review controls only for admin', () => {

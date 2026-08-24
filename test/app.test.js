@@ -248,9 +248,12 @@ test('browser assets support login transition and blue-white branding', () => {
   assert.doesNotThrow(() => new Function(source));
   assert.match(server, /'\.png': 'image\/png'/);
   assert.match(css, /\[hidden\]\s*\{\s*display\s*:\s*none\s*!important/);
-  assert.equal((html.match(/src="\/fiberis-mark\.png"/g) || []).length, 2);
+  assert.equal((html.match(/src="\/fiberis-login-logo\.png"/g) || []).length, 1);
+  assert.equal((html.match(/src="\/fiberis-mark\.png"/g) || []).length, 1);
   assert.match(css, /--blue:/);
   assert.doesNotMatch(css, /--green:/);
+  const loginLogo = fs.readFileSync(path.join(here, '../public/fiberis-login-logo.png'));
+  assert.equal(crypto.createHash('sha256').update(loginLogo).digest('hex'), '79d290b3f4063fa52b67a9a506b42aa1bd54b206a7fa2b60655a432d6868b243');
   const logo = fs.readFileSync(path.join(here, '../public/fiberis-mark.png'));
   assert.equal(crypto.createHash('sha256').update(logo).digest('hex'), '129a5b5c9838076eaa0270d639be344bfc488a4db6c54205e7251ac0dc32d529');
   assert.doesNotMatch(css, /\.login-logo[^}]*filter:|\.brand img[^}]*filter:/);

@@ -238,12 +238,19 @@ test('stored passwords are hashed and plaintext login still works', async () => 
   } finally { fs.rmSync(file, { force: true }); }
 });
 
-test('browser assets support login transition', () => {
+test('browser assets support login transition and blue-white branding', () => {
   const here = path.dirname(fileURLToPath(import.meta.url));
   const source = fs.readFileSync(path.join(here, '../public/app.js'), 'utf8');
+  const html = fs.readFileSync(path.join(here, '../public/index.html'), 'utf8');
   const css = fs.readFileSync(path.join(here, '../public/styles.css'), 'utf8');
+  const server = fs.readFileSync(path.join(here, '../src/server.js'), 'utf8');
   assert.doesNotThrow(() => new Function(source));
+  assert.match(server, /'\.png': 'image\/png'/);
   assert.match(css, /\[hidden\]\s*\{\s*display\s*:\s*none\s*!important/);
+  assert.equal((html.match(/src="\/fiberis-mark\.png"/g) || []).length, 2);
+  assert.match(css, /--blue:/);
+  assert.doesNotMatch(css, /--green:/);
+  assert.ok(fs.statSync(path.join(here, '../public/fiberis-mark.png')).size > 0);
 });
 
 test('browser exposes mapping review controls only for admin', () => {

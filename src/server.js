@@ -9,7 +9,7 @@ const publicDir = path.join(root, 'public');
 const dataDir = path.join(root, 'data');
 fs.mkdirSync(dataDir, { recursive: true });
 const app = createApp(path.join(dataDir, 'fiberis.json'), path.join(dataDir, 'import-preview.json'));
-const types = { '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.svg': 'image/svg+xml' };
+const types = { '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png' };
 
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
